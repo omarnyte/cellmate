@@ -6,7 +6,7 @@
   "content_scripts": [
     {
       "js": ["scripts/content.js"],
-      "matches": ["https://www.nytimes.com/crosswords/game"]
+      "matches": ["https://www.nytimes.com/crosswords/game*"]
     }
   ],
   "commands": {
