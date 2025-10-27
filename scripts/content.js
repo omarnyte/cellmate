@@ -14,7 +14,11 @@ function togglePencilMode() {
 
 function addEventListeners() {
   document.addEventListener("keydown", (event) => {
-    if (event.key === "p") {
+    const isMacShortcut = event.ctrlKey && event.key === "p" && !event.altKey;
+    const isWindowsShortcut = event.altKey && event.key === "p" && !event.ctrlKey;
+
+    if (isMacShortcut || isWindowsShortcut) {
+      event.preventDefault();
       togglePencilMode();
     }
   });
