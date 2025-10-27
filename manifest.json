@@ -1,15 +1,28 @@
 {
-  "name": "Reading time",
-  "description": "Add the reading time to Chrome Extension documentation articles",
+  "name": "Better NYT Crossword Puzzles",
+  "description": "Improved NYT Crossword experience, including pencil toggling and alphabet cycling.",
   "version": "1.0",
   "manifest_version": 3,
   "content_scripts": [
     {
       "js": ["scripts/content.js"],
-      "matches": [
-        "https://developer.chrome.com/docs/extensions/*",
-        "https://developer.chrome.com/docs/webstore/*"
-      ]
+      "matches": ["https://www.nytimes.com/crosswords/game"]
     }
-  ]
+  ],
+  "commands": {
+    "toggle-pencil": {
+      "suggested_key": {
+        "default": "Ctrl+P",
+        "mac": "MacCtrl+P"
+      },
+      "description": "Toggle pencil mode"
+    },
+    "cycle-alphabet": {
+      "suggested_key": {
+        "default": "Ctrl+A",
+        "mac": "MacCtrl+A"
+      },
+      "description": "Cycle through the alphabet"
+    }
+  }
 }
