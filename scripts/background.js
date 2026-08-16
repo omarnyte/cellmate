@@ -70,6 +70,29 @@ async function typeLetter(tabId, letter) {
   });
 }
 
+// Typing a letter auto-advances NYT's grid selection to the next cell in the
+// word. This dispatches a trusted ArrowLeft keystroke (the same mechanism a
+// real user would use) so the content script can steer the selection back to
+// the cell it started from between letters of an alphabet cycle.
+async function pressArrowLeft(tabId) {
+  const keyParams = {
+    key: "ArrowLeft",
+    code: "ArrowLeft",
+    windowsVirtualKeyCode: 37,
+    nativeVirtualKeyCode: 37,
+  };
+
+  await sendCommand(tabId, "Input.dispatchKeyEvent", {
+    type: "keyDown",
+    ...keyParams,
+  });
+
+  await sendCommand(tabId, "Input.dispatchKeyEvent", {
+    type: "keyUp",
+    ...keyParams,
+  });
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const tabId = sender.tab?.id;
   if (!tabId) return;
@@ -83,6 +106,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === "TYPE_LETTER") {
     typeLetter(tabId, message.letter)
+      .then(() => sendResponse({ ok: true }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  if (message.type === "ARROW_LEFT") {
+    pressArrowLeft(tabId)
       .then(() => sendResponse({ ok: true }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true;

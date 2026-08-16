@@ -77,6 +77,36 @@ async function setLetterInActiveSquare(letter) {
   }
 }
 
+// Ask the background worker to send a trusted ArrowLeft keystroke.
+async function pressArrowLeft() {
+  const response = await sendMessageToBackground({ type: 'ARROW_LEFT' });
+  if (!response?.ok) {
+    console.warn('Failed to send ArrowLeft:', response?.error);
+  }
+}
+
+// Typing a letter can auto-advance NYT's selection to the next cell in the
+// word (like a normal crossword UI). If that happened, step the selection
+// back to the cell the cycle started on with trusted ArrowLeft keystrokes so
+// every letter of the cycle lands in the same square. If the typed letter
+// was the last cell in the word, the selection won't have moved and this is
+// a no-op.
+async function restoreOriginalCell(originalCellId) {
+  if (!originalCellId) return;
+
+  const maxAttempts = 5;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (getActiveSquare()?.id === originalCellId) return;
+    await pressArrowLeft();
+    // Give the page a moment to process the keystroke and re-render.
+    await new Promise(resolve => setTimeout(resolve, 30));
+  }
+
+  if (getActiveSquare()?.id !== originalCellId) {
+    console.warn('Could not restore focus to the original cell after typing a letter');
+  }
+}
+
 // State variable to track if cycling is in progress
 let isCycling = false;
 
@@ -92,6 +122,11 @@ async function cycleAlphabet() {
     console.warn('No active square found');
     return;
   }
+
+  // Captured once, before the loop starts, so every letter in the cycle can
+  // be steered back to this exact cell even as typing tries to auto-advance
+  // the selection.
+  const originalCellId = activeSquare.id;
 
   isCycling = true;
   console.log('Starting alphabet cycle...');
@@ -112,6 +147,9 @@ async function cycleAlphabet() {
     console.log(`Trying letter: ${letter}`);
 
     await setLetterInActiveSquare(letter);
+
+    // Undo any auto-advance so the next letter is tried in the same cell.
+    await restoreOriginalCell(originalCellId);
 
     // Wait for the delay
     await new Promise(resolve => setTimeout(resolve, delay));
