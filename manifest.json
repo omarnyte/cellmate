@@ -3,6 +3,10 @@
   "description": "Improved NYT Crossword experience, including pencil toggling and alphabet cycling.",
   "version": "1.0",
   "manifest_version": 3,
+  "permissions": ["debugger"],
+  "background": {
+    "service_worker": "scripts/background.js"
+  },
   "content_scripts": [
     {
       "js": ["scripts/content.js"],
