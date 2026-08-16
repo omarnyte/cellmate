@@ -42,15 +42,36 @@ function getActiveSquareTextElement() {
   return parent?.querySelector('text');
 }
 
-// Check if the completion modal has appeared
-function isCompletionModalVisible() {
-  // Look for common modal/dialog classes that indicate puzzle completion
-  const modal = document.querySelector('[role="dialog"]')
-    || document.querySelector('.xwd__modal')
-    || document.querySelector('[class*="congratulations"]')
-    || document.querySelector('[class*="complete"]');
+// Determine which (if any) modal is currently visible. NYT shows two
+// different modals that both appear once the grid is fully filled:
+//   - the genuine "you solved it" modal, once every square is correct
+//   - a "wrong guess" modal (heading "Almost there.") when the grid is
+//     full but at least one square is wrong
+// Both use `[role="dialog"]`, so we can't tell them apart generically. The
+// wrong-guess modal's body carries an extra `xwd__rats-modal` class that the
+// real completion modal doesn't have, which is what we key off of here.
+function getVisibleModalKind() {
+  const modal = document.querySelector('[role="dialog"]');
+  if (!modal || modal.offsetParent === null) return null; // not shown, or hidden
 
-  return modal !== null && modal.offsetParent !== null; // offsetParent null means hidden
+  if (modal.querySelector('.xwd__rats-modal')) return 'wrong-guess';
+
+  return 'solved';
+}
+
+// Dismiss the "wrong guess" modal by clicking its "Keep trying" button.
+// Unlike typing into the grid, a plain (non-trusted) click on this button
+// works fine -- it's a normal DOM button, not part of NYT's synthetic-event-
+// rejecting SVG grid -- so this doesn't need to go through chrome.debugger.
+function dismissWrongGuessModal() {
+  const dismissButton = document.querySelector(
+    '[role="dialog"] .xwd__rats-modal .xwd__modal--button-container button'
+  );
+  if (dismissButton) {
+    dismissButton.click();
+    return true;
+  }
+  return false;
 }
 
 // Send a message to the background service worker and await its response.
@@ -154,11 +175,19 @@ async function cycleAlphabet() {
     // Wait for the delay
     await new Promise(resolve => setTimeout(resolve, delay));
 
-    // Check if completion modal appeared
-    if (isCompletionModalVisible()) {
+    // Check which modal (if any) appeared after this guess.
+    const modalKind = getVisibleModalKind();
+    if (modalKind === 'solved') {
       console.log(`Success! Puzzle completed with letter: ${letter}`);
       solved = true;
       break;
+    }
+
+    if (modalKind === 'wrong-guess') {
+      console.log(`Letter "${letter}" filled the grid but was wrong; dismissing modal.`);
+      dismissWrongGuessModal();
+      // Give the modal a moment to close before trying the next letter.
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
 
